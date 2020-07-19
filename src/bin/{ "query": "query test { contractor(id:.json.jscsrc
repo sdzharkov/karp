@@ -1,0 +1,1 @@
+{ "query": "query test { contractor(id: 22) { firstName }" }
