@@ -1,51 +1,48 @@
 use wasm_bindgen::prelude::*;
-use reqwest::{Client};
+use wasm_bindgen::JsCast;
+// use reqwest::{Client};
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{Request, RequestInit, RequestMode, Response};
 
 #[wasm_bindgen]
 pub struct Karp {
   address: String,
-  client: Client,
-}
-
-#[wasm_bindgen]
-pub async fn run() -> Result<JsValue, JsValue> {
-    let res = reqwest::Client::new()
-        .get("https://api.github.com/repos/rustwasm/wasm-bindgen/branches/master")
-        .header("Accept", "application/vnd.github.v3+json")
-        .send()
-        .await?;
-
-    let text = res.text().await?;
-    let branch_info: Branch = serde_json::from_str(&text).unwrap();
-
-    Ok(JsValue::from_serde(&branch_info).unwrap())
 }
 
 #[wasm_bindgen]
 impl Karp {
   pub fn new(address: String) -> Karp {
-    let client = Client::new();
 
     Karp {
       address: address,
-      client,
     }
   }
 
-  pub async fn query(&self, body: &str) -> Result<JsValue, JsValue> {
-    let resp = self.client
-      .post(&self.address)
-      .body(body)
-      .header("Content-Type", "application/json")
-      .header("Accept", "application/json")
-      .send()
-      .await?;
+  pub async fn query(self, body: JsValue) -> Result<JsValue, JsValue> {
+    let mut opts = RequestInit::new();
+    opts.method("POST");
+    opts.mode(RequestMode::Cors);
+    opts.body(Some(&body));
 
-    println!("{:?}", data);
+    let request = Request::new_with_str_and_init(&self.address, &opts)?;
+    request.headers().set("Content-Type", "application/json")?;
 
-    Ok(JsValue::from_str(data.as_str()))
+    request.headers().set("Accept", "*/*")?;
+
+    let window = web_sys::window().unwrap();
+    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+
+    // `resp_value` is a `Response` object.
+    // assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+
+    let json = JsFuture::from(resp.json()?).await?;
+
+    Ok(json)
+    // Use serde to parse the JSON into a struct.
+    // let branch_info = json.into_serde().unwrap();
+
+    // Send the `Branch` struct back to JS as an `Object`.
+    // Ok(JsValue::from_serde(&branch_info).unwrap())
   }
 }
-
-// Investigate this - using web api's directly:
-// https://github.com/rustwasm/wasm-bindgen/blob/master/examples/fetch/src/lib.rs
