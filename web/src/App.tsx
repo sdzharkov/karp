@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Karp } from 'karp';
 
 import logo from './logo.svg';
 import './App.css';
-import { Karp } from 'karp';
 
 const TEST_GQL = `
   {
@@ -37,7 +37,9 @@ function App() {
     async () => {
       if (karp) {
         try {
-          const data = await karp.query(TEST_GQL);
+          const data = await karp.query(JSON.stringify({
+            query: TEST_GQL,
+          }));
           console.log(data);
         } catch (error) {
           console.error(error);
