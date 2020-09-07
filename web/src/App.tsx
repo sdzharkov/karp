@@ -37,9 +37,7 @@ function App() {
     async () => {
       if (karp) {
         try {
-          const data = await karp.query(JSON.stringify({
-            query: TEST_GQL,
-          }));
+          const data = await karp.query(TEST_GQL);
           console.log(data);
         } catch (error) {
           console.error(error);
