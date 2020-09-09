@@ -23,7 +23,11 @@ function App() {
     try {
       setLoading(true);
       const wasm = await import('karp');
-      setKarp(wasm.Karp.new("https://graphql-weather-api.herokuapp.com/"));
+      const client = wasm.Karp.new("https://graphql-weather-api.herokuapp.com/")
+      setKarp(client);
+      client.headers({
+        'test': 'afdafsddsafsd',
+      })
     } finally {
       setLoading(false);
     }

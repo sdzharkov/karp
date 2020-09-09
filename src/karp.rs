@@ -3,6 +3,7 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 
 macro_rules! log {
   ( $( $t:tt )* ) => {
@@ -13,6 +14,7 @@ macro_rules! log {
 #[wasm_bindgen]
 pub struct Karp {
   address: String,
+  headers: Option<Map<String, Value>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -25,8 +27,22 @@ impl Karp {
   pub fn new(address: String) -> Karp {
 
     Karp {
-      address: address,
+      address,
+      headers: None,
     }
+  }
+
+  pub fn headers(&mut self, headers: JsValue) {
+    let mut original_headers: Map<String, serde_json::Value> = match headers.into_serde() {
+      Ok(t) => t,
+      Err(_e) => Map::new()
+    };
+    original_headers.insert("Content-Type".to_string(), serde_json::Value::String("application/json".to_string()));
+    original_headers.insert("Accept".to_string(), serde_json::Value::String("*/*".to_string()));
+
+    log!("All headers: {:?}", original_headers);
+
+    self.headers = Some(original_headers);
   }
 
   pub async fn query(self, body: String) -> Result<JsValue, JsValue> {
@@ -67,7 +83,7 @@ impl Karp {
   fn create_body(&self, body: &String) -> Result<JsValue, serde_json::Error> {
     // @TODO: transfer ownership without clone
     let query = Query {
-      query: body.clone(),
+      query: body.to_string(),
     };
 
     let t = serde_json::to_string(&query)?;
