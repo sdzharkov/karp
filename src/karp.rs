@@ -5,6 +5,7 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+#[allow(unused_macros)]
 macro_rules! log {
   ( $( $t:tt )* ) => {
       web_sys::console::log_1(&format!( $( $t )* ).into());
@@ -14,7 +15,7 @@ macro_rules! log {
 #[wasm_bindgen]
 pub struct Karp {
   address: String,
-  headers: Option<Map<String, Value>>,
+  headers: Option<Map<String, Value>>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -24,23 +25,34 @@ pub struct Query {
 
 #[wasm_bindgen]
 impl Karp {
-  pub fn new(address: String) -> Karp {
+  pub fn new(address: String, config: Option<js_sys::Object>) -> Result<Karp, JsValue> {
+    let mut karp = Karp { address, headers: None };
+    let mut karp_config: Map<String, serde_json::Value> = JsValue::from(config).into_serde().unwrap();
 
-    Karp {
-      address,
-      headers: None,
+
+    if karp_config.contains_key("headers") {
+      if let Some(headers) = karp_config.get_mut("headers") {
+        if let Some(header_obj) = headers.as_object_mut() {
+          header_obj.insert("Content-Type".to_string(), serde_json::Value::String("application/json".to_string()));
+          header_obj.insert("Accept".to_string(), serde_json::Value::String("*/*".to_string()));
+
+          // @TODO: I use mem::take to avoid cloneing. I no longer nead the header obj
+          // from above. Is this a bad practice?
+          karp.headers = Some(std::mem::take(header_obj));
+        }
+      }
     }
+
+    return Ok(karp);
   }
 
-  pub fn headers(&mut self, headers: JsValue) {
+  pub fn set_headers(&mut self, headers: &JsValue) {
     let mut original_headers: Map<String, serde_json::Value> = match headers.into_serde() {
       Ok(t) => t,
       Err(_e) => Map::new()
     };
     original_headers.insert("Content-Type".to_string(), serde_json::Value::String("application/json".to_string()));
     original_headers.insert("Accept".to_string(), serde_json::Value::String("*/*".to_string()));
-
-    log!("All headers: {:?}", original_headers);
 
     self.headers = Some(original_headers);
   }
