@@ -21,6 +21,8 @@ pub struct Karp {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Query {
   query: String,
+  variables: Option<Map<String, Value>>,
+  // operationName: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -57,8 +59,8 @@ impl Karp {
     self.headers = Some(original_headers);
   }
 
-  pub async fn query(self, body: String) -> Result<JsValue, JsValue> {
-    let request_body = self.create_body(&body).unwrap();
+  pub async fn query(self, body: String, variables: Option<js_sys::Object>) -> Result<JsValue, JsValue> {
+    let request_body = self.create_body(&body, variables).unwrap();
 
     let mut opts = RequestInit::new();
     opts.method("POST");
@@ -92,14 +94,22 @@ impl Karp {
   /// # Arguments
   /// * `body` - The string literal passed from the frotend
   /// 
-  fn create_body(&self, body: &String) -> Result<JsValue, serde_json::Error> {
+  fn create_body(&self, body: &String, variables: Option<js_sys::Object>) -> Result<JsValue, serde_json::Error> {
     // @TODO: transfer ownership without clone
-    let query = Query {
+    let mut query = Query {
       query: body.to_string(),
+      variables: None,
     };
 
-    let t = serde_json::to_string(&query)?;
+    // @TODO: error handling
+    let query_variables: Map<String, serde_json::Value> = JsValue::from(variables).into_serde().unwrap();
 
-    Ok(JsValue::from_str(&t))
+    if query_variables.len() > 0 {
+      query.variables = Some(query_variables);
+    }
+
+    let serialized_body = serde_json::to_string(&query)?;
+
+    Ok(JsValue::from_str(&serialized_body))
   }
 }

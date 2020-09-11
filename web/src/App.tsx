@@ -5,8 +5,8 @@ import logo from './logo.svg';
 import './App.css';
 
 const TEST_GQL = `
-  {
-    getCityByName(name: "Sacramento") {
+  query GetCity($name: String!) {
+    getCityByName(name: $name) {
       id
       name
       weather {
@@ -42,7 +42,9 @@ function App() {
     async () => {
       if (karp) {
         try {
-          const data = await karp.query(TEST_GQL);
+          const data = await karp.query(TEST_GQL, {
+            name: 'Sacramento'
+          });
           console.log(data);
         } catch (error) {
           console.error(error);
