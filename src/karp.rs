@@ -1,9 +1,10 @@
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use js_sys::{Object};
 
 #[allow(unused_macros)]
 macro_rules! log {
@@ -15,7 +16,7 @@ macro_rules! log {
 #[wasm_bindgen]
 pub struct Karp {
   address: String,
-  headers: Option<Map<String, Value>>
+  headers: Option<Map<String, Value>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -27,20 +28,20 @@ pub struct Query {
 
 #[wasm_bindgen]
 impl Karp {
-  pub fn new(address: String, config: Option<js_sys::Object>) -> Result<Karp, JsValue> {
+  pub fn new(address: String, config: Option<Object>) -> Result<Karp, JsValue> {
     let mut karp = Karp { address, headers: None };
-    let mut karp_config: Map<String, serde_json::Value> = JsValue::from(config).into_serde().unwrap();
 
-
-    if karp_config.contains_key("headers") {
-      if let Some(headers) = karp_config.get_mut("headers") {
-        if let Some(header_obj) = headers.as_object_mut() {
-          header_obj.insert("Content-Type".to_string(), serde_json::Value::String("application/json".to_string()));
-          header_obj.insert("Accept".to_string(), serde_json::Value::String("*/*".to_string()));
-
-          // @TODO: I use mem::take to avoid cloneing. I no longer nead the header obj
-          // from above. Is this a bad practice?
-          karp.headers = Some(std::mem::take(header_obj));
+    if config.is_some() {
+      let mut karp_config: Map<String, serde_json::Value> = JsValue::from(config).into_serde().unwrap();
+  
+      if karp_config.contains_key("headers") {
+        if let Some(headers) = karp_config.get_mut("headers") {
+          if let Some(header_obj) = headers.as_object_mut() {
+            header_obj.insert("Content-Type".to_string(), serde_json::Value::String("application/json".to_string()));
+            // @TODO: I use mem::take to avoid cloning. I no longer nead the header obj
+            // from above. Is this a bad practice?
+            karp.headers = Some(std::mem::take(header_obj));
+          }
         }
       }
     }
@@ -54,12 +55,11 @@ impl Karp {
       Err(_e) => Map::new()
     };
     original_headers.insert("Content-Type".to_string(), serde_json::Value::String("application/json".to_string()));
-    original_headers.insert("Accept".to_string(), serde_json::Value::String("*/*".to_string()));
 
     self.headers = Some(original_headers);
   }
 
-  pub async fn query(self, body: String, variables: Option<js_sys::Object>) -> Result<JsValue, JsValue> {
+  pub async fn query(self, body: String, variables: Option<Object>) -> Result<JsValue, JsValue> {
     let request_body = self.create_body(&body, variables).unwrap();
 
     let mut opts = RequestInit::new();
@@ -94,7 +94,7 @@ impl Karp {
   /// # Arguments
   /// * `body` - The string literal passed from the frotend
   /// 
-  fn create_body(&self, body: &String, variables: Option<js_sys::Object>) -> Result<JsValue, serde_json::Error> {
+  fn create_body(&self, body: &String, variables: Option<Object>) -> Result<JsValue, serde_json::Error> {
     // @TODO: transfer ownership without clone
     let mut query = Query {
       query: body.to_string(),

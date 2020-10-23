@@ -1,5 +1,5 @@
 [package]
-name = "karp-wasm"
+name = "karp"
 version = "0.1.0"
 authors = ["Stephan Zharkov <stephan.zharkov@gmail.com>"]
 edition = "2018"

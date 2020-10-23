@@ -27,6 +27,9 @@ function App() {
         headers: {
           'test': 'adfadsfsd',
         }
+      });
+      client.set_headers({
+        'ha': 'ba',
       })
       setKarp(client);
     } finally {
